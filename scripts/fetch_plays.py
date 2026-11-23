@@ -95,6 +95,9 @@ def main():
             plays += parse(open(f, "rb").read())[0]
     else:
         token = os.environ.get("BGG_TOKEN", "").strip()
+        if not token and os.environ.get("GITHUB_ACTIONS"):
+            print("BGG_TOKEN non impostato: mantengo i dati esistenti.")
+            return
         page = 1
         while True:
             got, total, n = parse(fetch_page(page, token))
