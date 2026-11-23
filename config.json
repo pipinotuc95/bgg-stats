@@ -1,0 +1,14 @@
+{
+  "username": "THE_B",
+  "teamGames": ["briscola", "tresette", "buraco"],
+  "games": [
+    { "key": "briscola",     "label": "Briscola",       "match": ["^briscola"] },
+    { "key": "tresette",     "label": "TreSette",       "match": ["^tre ?sette", "^tressette", "^tresette"] },
+    { "key": "ciapano",      "label": "Ciapanò",        "match": ["^ciapan"] },
+    { "key": "take5",        "label": "Take 5",         "match": ["^take 5", "^6 nimmt", "^category 5"] },
+    { "key": "buraco",       "label": "Buraco",         "match": ["^buraco"] },
+    { "key": "carcassonne",  "label": "Carcassonne",    "match": ["^carcassonne$"] },
+    { "key": "catan",        "label": "Catan",          "match": ["^catan$", "^the settlers of catan$", "^die siedler von catan$", "^i coloni di catan$"] },
+    { "key": "tickettoride", "label": "Ticket to Ride", "match": ["^ticket to ride$", "^ticket to ride: europe$"] }
+  ]
+}
