@@ -174,3 +174,10 @@ select { font: inherit; font-size: .92rem; padding: 8px 10px; border: 1px solid 
 .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); font-size: .8rem; margin: 2px 4px 2px 0; }
 .foot { color: var(--muted); font-size: .8rem; padding-bottom: 32px; }
 @media (max-width: 600px) { .hero .big { font-size: 2.5rem; } .top-inner { flex-wrap: wrap; } }
+
+/* classifica ordinabile e anno */
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover, th.sortable.on { color: var(--text); }
+tr.dim td { color: var(--muted); }
+tr.dim .bar i { opacity: .45; }
+select.btn { width: auto; padding-right: 28px; }

@@ -16,7 +16,7 @@
   const monthLabel = k => { const [y, m] = k.split("-"); return `${MONTHS[+m - 1]} ${y.slice(2)}`; };
 
   let CONFIG, DATA, charts = [];
-  const state = { tab: "overview", pairGame: null, pick: ["", "", "", ""] };
+  const state = { tab: "overview", pairGame: null, pick: ["", "", "", ""], year: "", sort: "rate" };
   try { Object.assign(state, JSON.parse(localStorage.getItem("bggstats") || "{}")); } catch (e) {}
   const save = () => { try { localStorage.setItem("bggstats", JSON.stringify(state)); } catch (e) {} };
 
@@ -116,7 +116,9 @@
   }
 
   /* ---------- calcoli ---------- */
-  const plays = key => DATA.plays.filter(p => (!key || p.game === key) && !p.incomplete);
+  const plays = key => DATA.plays.filter(p => (!key || p.game === key) && !p.incomplete && (!state.year || p.date.startsWith(state.year)));
+  const periodo = () => state.year ? `nel ${state.year}` : "negli ultimi 12 mesi";
+  const calTitle = () => state.year ? `Calendario ${state.year}` : "Calendario degli ultimi 12 mesi";
   const qty = p => p.quantity || 1;
   const sumQ = l => l.reduce((a, p) => a + qty(p), 0);
 
@@ -205,11 +207,17 @@
     $("#tabs").querySelectorAll(".tab").forEach(b => b.onclick = () => go(b.dataset.k));
     const act = $("#tabs .active"); if (act) $("#tabs").scrollLeft = act.offsetLeft - 16;
 
+    const years = [...new Set(DATA.plays.map(p => p.date.slice(0, 4)))].sort().reverse();
+    if (state.year && !years.includes(state.year)) state.year = "";
+    $("#yearSel").innerHTML = `<option value="">📅 Tutti gli anni</option>` + years.map(y => `<option value="${y}" ${y === state.year ? "selected" : ""}>📅 ${y}</option>`).join("");
+    $("#yearSel").onchange = e => { state.year = e.target.value; save(); render(); };
+
     const v = $("#view");
     if (!DATA.plays.length) { v.innerHTML = ""; return; }
     if (state.tab === "overview") renderOverview(v);
     else if (state.tab === "pairs") renderPairs(v);
     else renderGame(v, state.tab);
+    v.querySelectorAll("th[data-sort]").forEach(th => th.onclick = () => { state.sort = th.dataset.sort; save(); const y = scrollY; render(); scrollTo(0, y); });
   }
   function go(k) { state.tab = k; save(); render(); window.scrollTo({ top: 0 }); }
 
@@ -218,8 +226,10 @@
   /** Calendario stile GitHub degli ultimi 12 mesi: una casella per giorno, colore più intenso = più partite. */
   function heatmap(list, color) {
     const counts = countBy(list, p => p.date);
-    const end = new Date(); end.setHours(0, 0, 0, 0);
-    const start = new Date(end); start.setDate(start.getDate() - 364); start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    let end = new Date(); end.setHours(0, 0, 0, 0);
+    let start = new Date(end); start.setDate(start.getDate() - 364);
+    if (state.year) { start = new Date(+state.year, 0, 1); const ye = new Date(+state.year, 11, 31); if (ye < end) end = ye; }
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
     const max = Math.max(1, ...[...counts.values()]);
     const shade = l => l === 0 ? "var(--heat0)" : l === 4 ? "var(--c)" : `color-mix(in oklab, var(--c) ${[0, 30, 55, 80][l]}%, var(--heat0))`;
     let cells = "", days = 0, total = 0;
@@ -230,7 +240,7 @@
       cells += `<i style="background:${shade(lvl)}" title="${fmtDate(k)}: ${n} partit${n === 1 ? "a" : "e"}"></i>`;
     }
     return `<div style="--c:${color}"><div class="heat-wrap"><div class="heat">${cells}</div></div>
-      <div class="heat-legend"><span>${fmtInt(total)} partite in ${days} giorni negli ultimi 12 mesi</span><span style="flex:1"></span>meno
+      <div class="heat-legend"><span>${fmtInt(total)} partite in ${days} giorni ${periodo()}</span><span style="flex:1"></span>meno
       ${[0, 1, 2, 3, 4].map(l => `<i style="background:${shade(l)}"></i>`).join("")} più</div></div>`;
   }
 
@@ -239,7 +249,7 @@
     const total = sumQ(all);
     const minutes = all.reduce((a, p) => a + p.length * qty(p), 0);
     const days = new Set(all.map(p => p.date)).size;
-    const last12 = lastMonths(12);
+    const last12 = state.year ? monthKeys(`${state.year}-01`, `${state.year}-12`) : lastMonths(12);
     const tiles = CONFIG.games.map(g => {
       const l = plays(g.key), n = sumQ(l), bm = countBy(l, p => p.date.slice(0, 7));
       const sp = last12.map(k => bm.get(k) || 0), mx = Math.max(1, ...sp);
@@ -249,7 +259,7 @@
         <div class="num">${fmtInt(n)}<small>partite</small></div>
         <div class="meta">${n ? `ultima ${fmtDate(l[l.length - 1].date)}` : "nessuna partita trovata"}</div>
         <div class="meta">${top ? `👑 ${esc(top.name)} ${pct(top.wins, top.games)}` : "&nbsp;"}</div>
-        <div class="spark" title="ultimi 12 mesi">${sp.map((x, i) => `<i style="height:${(x / mx) * 100}%" title="${monthLabel(last12[i])}: ${x}"></i>`).join("")}</div>
+        <div class="spark" title="${state.year || "ultimi 12 mesi"}">${sp.map((x, i) => `<i style="height:${(x / mx) * 100}%" title="${monthLabel(last12[i])}: ${x}"></i>`).join("")}</div>
       </button>`;
     }).join("");
     const fav = CONFIG.games.map(g => ({ g, n: sumQ(plays(g.key)) })).sort((a, b) => b.n - a.n)[0];
@@ -258,7 +268,7 @@
 
     v.innerHTML = `
       <section class="hero" style="--c:var(--g1)" data-icon="🎲">
-        <div class="eyebrow">Tutti i giochi scelti</div>
+        <div class="eyebrow">Tutti i giochi scelti${state.year ? " · " + state.year : ""}</div>
         <div class="big">${fmtInt(total)}<small>partite</small></div>
         <div class="line">dal ${fmtDate(all[0]?.date)} al ${fmtDate(all[all.length - 1]?.date)}</div>
         <div class="chips"><span class="chip">📅 ${fmtInt(days)} giorni di gioco</span><span class="chip">⏱️ ${fmtMin(minutes)} registrati</span>
@@ -266,8 +276,8 @@
       </section>
       <div class="grid g4" style="margin-bottom:16px">${tiles}</div>
       <div class="card"><h2>Partite per mese, per gioco</h2><div class="chart-box"><canvas id="cm"></canvas></div></div>
-      <div class="card"><h2>Calendario degli ultimi 12 mesi</h2>${heatmap(all, "var(--g1)")}</div>
-      <div class="card"><h2>Classifica giocatori (tutti i giochi)</h2>${playersTable(ps, false, "var(--g1)")}</div>
+      <div class="card"><h2>${calTitle()}</h2>${heatmap(all, "var(--g1)")}</div>
+      <div class="card"><h2>Classifica giocatori (tutti i giochi)</h2>${playersTable(ps, false, "var(--g1)", Math.max(3, Math.ceil(total * .02)))}</div>
       ${others.length ? `<div class="card"><h2>🔎 Altri giochi registrati su BGG (non inclusi)</h2>
         <p class="note" style="margin:0 0 10px">Se qui c'è una versione di un gioco che volevi contare (es. un'altra edizione di Ticket to Ride), dimmelo e la aggiungo.</p>
         <div>${others.map(([n, c]) => `<span class="pill">${esc(n)} <strong>${c}</strong></span>`).join("")}</div></div>` : ""}`;
@@ -283,15 +293,26 @@
     }
   }
 
-  function playersTable(stats, withScore = true, color = "var(--accent)") {
+  /** Classifica ordinabile (clic sulle intestazioni). Con "% vitt." chi ha meno di minGames partite va in fondo. */
+  function sortStats(stats, minGames) {
+    const k = state.sort, val = s => k === "rate" ? s.rate : (s[k] ?? -Infinity);
+    const ok = s => k !== "rate" || s.games >= minGames;
+    return [...stats].sort((a, b) => (ok(b) - ok(a)) || (val(b) - val(a)) || (b.games - a.games));
+  }
+  function playersTable(stats, withScore = true, color = "var(--accent)", minGames = 1) {
     if (!stats.length) return '<p class="muted">Nessun giocatore registrato.</p>';
-    const medal = i => ["🥇", "🥈", "🥉"][i] || `<span class="rank">${i + 1}</span>`;
-    return `<div class="table-wrap" style="--c:${color}"><table><thead><tr><th>Giocatore</th><th class="num">Partite</th><th class="num">Vittorie</th><th class="num">% vitt.</th><th></th>
-      ${withScore ? '<th class="num">Punti medi</th><th class="num">Record</th>' : ""}<th>Ultima</th></tr></thead><tbody>
-      ${stats.map((s, i) => `<tr><td>${medal(i)} ${esc(s.name)}</td><td class="num">${fmtInt(s.games)}</td><td class="num">${fmtInt(s.wins)}</td><td class="num"><strong>${pct(s.wins, s.games)}</strong></td>
+    if (!withScore && ["avg", "best"].includes(state.sort)) state.sort = "rate";
+    const rows = sortStats(stats, minGames);
+    const below = s => state.sort === "rate" && s.games < minGames;
+    const medal = (s, i) => below(s) ? '<span class="rank">–</span>' : ["🥇", "🥈", "🥉"][i] || `<span class="rank">${i + 1}</span>`;
+    const th = (k, label) => `<th class="num sortable${state.sort === k ? " on" : ""}" data-sort="${k}" title="Ordina per ${label}">${label}${state.sort === k ? " ▼" : ""}</th>`;
+    return `<div class="table-wrap" style="--c:${color}"><table><thead><tr><th>Giocatore</th>${th("games", "Partite")}${th("wins", "Vittorie")}${th("rate", "% vitt.")}<th></th>
+      ${withScore ? th("avg", "Punti medi") + th("best", "Record") : ""}<th>Ultima</th></tr></thead><tbody>
+      ${rows.map((s, i) => `<tr class="${below(s) ? "dim" : ""}"><td>${medal(s, i)} ${esc(s.name)}</td><td class="num">${fmtInt(s.games)}</td><td class="num">${fmtInt(s.wins)}</td><td class="num"><strong>${pct(s.wins, s.games)}</strong></td>
         <td style="width:18%"><div class="bar"><i style="width:${s.rate * 100}%"></i></div></td>
         ${withScore ? `<td class="num">${fmtDec(s.avg)}</td><td class="num">${s.best === null ? "—" : fmtDec(s.best)}</td>` : ""}
-        <td>${fmtDate(s.last)}</td></tr>`).join("")}</tbody></table></div>`;
+        <td>${fmtDate(s.last)}</td></tr>`).join("")}</tbody></table></div>
+      ${state.sort === "rate" && rows.some(below) ? `<p class="note">In grigio chi ha meno di ${minGames} partite: è in fondo anche con una % alta.</p>` : ""}`;
   }
 
   function podium(stats, minGames, color) {
@@ -330,7 +351,7 @@
 
     v.innerHTML = `
       <section class="hero" style="--c:${c}" data-icon="${g.icon}">
-        <div class="eyebrow">${g.icon} ${esc(g.label)}</div>
+        <div class="eyebrow">${g.icon} ${esc(g.label)}${state.year ? " · " + state.year : ""}</div>
         <div class="big">${fmtInt(n)}<small>partite</small></div>
         <div class="line">dal ${fmtDate(l[0].date)} al ${fmtDate(l[l.length - 1].date)}</div>
         <div class="chips"><span class="chip">📅 ${days.size} giorni</span><span class="chip">👥 ${stats.length} giocatori</span>
@@ -347,9 +368,9 @@
         <div class="card"><h2>Podio</h2>${podium(stats, minGames, c)}</div>
         <div class="card"><h2>Corsa alle vittorie</h2><div class="chart-box sm"><canvas id="race"></canvas></div></div>
       </div>
-      <div class="card"><h2>Classifica giocatori</h2>${playersTable(stats, true, c)}</div>
+      <div class="card"><h2>Classifica giocatori</h2>${playersTable(stats, true, c, minGames)}</div>
       <div class="card"><h2>Partite per mese</h2><div class="chart-box"><canvas id="cm"></canvas></div></div>
-      <div class="card"><h2>Calendario degli ultimi 12 mesi</h2>${heatmap(l, c)}</div>
+      <div class="card"><h2>${calTitle()}</h2>${heatmap(l, c)}</div>
       <div class="grid g3" style="margin-bottom:16px">
         <div class="card"><h3>Giorno della settimana</h3><div class="chart-box sm"><canvas id="cw"></canvas></div></div>
         <div class="card"><h3>Per anno</h3><div class="chart-box sm"><canvas id="cy"></canvas></div></div>
@@ -430,10 +451,11 @@
       const k = pairKey(team); const r = rank.get(k) || { k, games: 0, wins: 0, last: "" };
       r.games += qty(p); if (t.winner === i) r.wins += qty(p); if (p.date > r.last) r.last = p.date; rank.set(k, r);
     });
-    const rr = [...rank.values()].sort((a, b) => b.games - a.games || b.wins - a.wins);
+    const minPair = 3;
+    const rr = [...rank.values()].map(r => ({ ...r, rate: r.wins / r.games })).sort((a, b) => ((b.games >= minPair) - (a.games >= minPair)) || b.rate - a.rate || b.games - a.games);
     $("#pairRank").innerHTML = rr.length ? `<div class="table-wrap" style="--c:${c}"><table><thead><tr><th>Coppia</th><th class="num">Partite</th><th class="num">Vittorie</th><th class="num">% vitt.</th><th></th><th>Ultima</th></tr></thead><tbody>
-      ${rr.map(r => `<tr><td>${esc(r.k)}</td><td class="num">${fmtInt(r.games)}</td><td class="num">${fmtInt(r.wins)}</td><td class="num"><strong>${pct(r.wins, r.games)}</strong></td><td style="width:18%"><div class="bar"><i style="width:${(r.wins / r.games) * 100}%"></i></div></td><td>${fmtDate(r.last)}</td></tr>`).join("")}
-      </tbody></table></div>` : '<p class="muted">Nessuna partita con coppie riconoscibili.</p>';
+      ${rr.map((r, i) => `<tr class="${r.games < minPair ? "dim" : ""}"><td>${r.games < minPair ? '<span class="rank">–</span>' : ["🥇", "🥈", "🥉"][i] || `<span class="rank">${i + 1}</span>`} ${esc(r.k)}</td><td class="num">${fmtInt(r.games)}</td><td class="num">${fmtInt(r.wins)}</td><td class="num"><strong>${pct(r.wins, r.games)}</strong></td><td style="width:18%"><div class="bar"><i style="width:${(r.wins / r.games) * 100}%"></i></div></td><td>${fmtDate(r.last)}</td></tr>`).join("")}
+      </tbody></table></div><p class="note">Ordinata per % di vittorie; in grigio le coppie con meno di ${minPair} partite.</p>` : '<p class="muted">Nessuna partita con coppie riconoscibili.</p>';
 
     const pick = state.pick.filter(Boolean);
     const out = $("#pairOut");
