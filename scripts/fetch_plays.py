@@ -95,11 +95,16 @@ def main():
             plays += parse(open(f, "rb").read())[0]
     else:
         token = os.environ.get("BGG_TOKEN", "").strip()
-        if not token and os.environ.get("GITHUB_ACTIONS"):
-            print("BGG_TOKEN non impostato: mantengo i dati esistenti.")
-            return
+        if not token:
+            xml = os.path.join(ROOT, "data", "bgg-plays.xml")
+            if os.path.exists(xml):
+                print("BGG_TOKEN non impostato: uso data/bgg-plays.xml")
+                plays = parse(open(xml, "rb").read())[0]
+            elif os.environ.get("GITHUB_ACTIONS"):
+                print("BGG_TOKEN non impostato e nessun data/bgg-plays.xml: mantengo i dati esistenti.")
+                return
         page = 1
-        while True:
+        while not plays or token:
             got, total, n = parse(fetch_page(page, token))
             plays += got
             print(f"pagina {page}: {n} partite registrate ({len(got)} dei giochi scelti), totale BGG {total}")

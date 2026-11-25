@@ -21,3 +21,9 @@ Nelle partite a 4 le coppie vengono riconosciute, in quest'ordine, da:
 
 ## Personalizzare
 `config.json` contiene i nomi dei giochi (espressioni regolari sul nome BGG).
+
+## Senza token: file scaricato dal browser
+Finché BGG non approva l'applicazione si può usare il bookmarklet in `tools/scarica-partite.js`
+(da cliccare su boardgamegeek.com da loggati): scarica `bgg-plays.xml`.
+Caricalo nella cartella `data/` del repository (Add file → Upload files): la GitHub Action
+lo converte e pubblica il sito. Con `BGG_TOKEN` impostato il file non serve più.
