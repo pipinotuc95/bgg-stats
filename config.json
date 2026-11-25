@@ -2,13 +2,13 @@
   "username": "THE_B",
   "teamGames": ["briscola", "tresette", "buraco"],
   "games": [
-    { "key": "briscola",     "label": "Briscola",       "match": ["^briscola$"], "maxScore": 3 },
-    { "key": "tresette",     "label": "TreSette",       "match": ["^tre ?sette", "^tressette", "^tresette"] },
-    { "key": "ciapano",      "label": "Ciapanò",        "match": ["^ciapan"] },
-    { "key": "take5",        "label": "Take 5",         "match": ["^take 5", "^6 nimmt", "^category 5"] },
-    { "key": "buraco",       "label": "Buraco",         "match": ["^buraco"] },
-    { "key": "carcassonne",  "label": "Carcassonne",    "match": ["^carcassonne$"] },
-    { "key": "catan",        "label": "Catan",          "match": ["^catan$", "^the settlers of catan$", "^die siedler von catan$", "^i coloni di catan$"] },
-    { "key": "tickettoride", "label": "Ticket to Ride", "match": ["^ticket to ride$", "^ticket to ride: europe$"] }
+    { "key": "briscola",     "label": "Briscola",       "icon": "🃏", "match": ["^briscola$"], "maxScore": 3 },
+    { "key": "tresette",     "label": "TreSette",       "icon": "♠️", "match": ["^tre ?sette", "^tressette", "^tresette"] },
+    { "key": "ciapano",      "label": "Ciapanò",        "icon": "♥️", "match": ["^ciapan"] },
+    { "key": "take5",        "label": "Take 5",         "icon": "🐮", "match": ["^take 5", "^6 nimmt", "^category 5"] },
+    { "key": "buraco",       "label": "Buraco",         "icon": "🎴", "match": ["^buraco"] },
+    { "key": "carcassonne",  "label": "Carcassonne",    "icon": "🏰", "match": ["^carcassonne"] },
+    { "key": "catan",        "label": "Catan",          "icon": "🌾", "match": ["^catan", "settlers of catan", "siedler von catan", "coloni di catan"] },
+    { "key": "tickettoride", "label": "Ticket to Ride", "icon": "🚂", "match": ["^ticket to ride", "^les aventuriers du rail", "^zug um zug", "^aventureros al tren"] }
   ]
 }

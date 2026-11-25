@@ -5,23 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Statistiche Partite BGG</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 <header class="top">
   <div class="wrap top-inner">
-    <div>
-      <h1>Statistiche partite</h1>
-      <p class="sub">Utente BGG <strong id="user">THE_B</strong> · <span id="updated">—</span></p>
+    <div class="brand">
+      <span class="logo">🎲</span>
+      <div>
+        <h1>Statistiche partite</h1>
+        <p class="sub">Utente BGG <strong id="user">THE_B</strong> · <span id="updated">—</span></p>
+      </div>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-    <button class="btn" id="pubBtn" hidden title="Torna ai dati pubblicati su GitHub">Dati pubblicati</button>
-    <label class="btn ghost" title="Carica uno o più file XML della BGG XML API2 (plays)">
-      Importa XML
-      <input type="file" id="xmlInput" accept=".xml,text/xml" multiple hidden>
-    </label>
+    <div class="actions">
+      <button class="btn" id="pubBtn" hidden title="Torna ai dati pubblicati su GitHub">Dati pubblicati</button>
+      <label class="btn" title="Carica uno o più file XML della BGG XML API2 (plays)">
+        Importa XML
+        <input type="file" id="xmlInput" accept=".xml,text/xml" multiple hidden>
+      </label>
     </div>
   </div>
   <nav class="wrap tabs" id="tabs"></nav>
@@ -30,15 +33,13 @@
 <main class="wrap">
   <section id="empty" class="card empty" hidden>
     <h2>Nessuna partita caricata</h2>
-    <p>Il file <code>data/plays.json</code> è vuoto. Si riempie in automatico con la GitHub Action
-      (serve il secret <code>BGG_TOKEN</code>), oppure lanciando <code>scripts/fetch_plays.py</code>.
-      Per una prova veloce puoi usare <em>Importa XML</em> con i file della XML API di BGG.</p>
+    <p>Clicca il preferito <strong>Statistiche live</strong> su boardgamegeek.com, oppure aspetta l'aggiornamento automatico
+      (serve il secret <code>BGG_TOKEN</code> su GitHub).</p>
   </section>
-
   <section id="view"></section>
 </main>
 
-<footer class="wrap foot">Dati da BoardGameGeek · partite con quantità &gt; 1 contate più volte</footer>
+<footer class="wrap foot">Dati da BoardGameGeek · le partite con quantità &gt; 1 contano più volte · le partite incomplete sono escluse</footer>
 
 <script src="app.js"></script>
 </body>

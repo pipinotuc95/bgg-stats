@@ -51,6 +51,9 @@ def fetch_page(page, token):
     raise RuntimeError(f"Pagina {page}: troppi tentativi falliti")
 
 
+OTHERS = {}  # giochi registrati ma non tra quelli scelti: nome -> partite
+
+
 def parse(xml_bytes):
     root = ET.fromstring(xml_bytes)
     out = []
@@ -59,6 +62,7 @@ def parse(xml_bytes):
         name = item.get("name") if item is not None else ""
         key = match_game(name)
         if not key:
+            OTHERS[name] = OTHERS.get(name, 0) + int(p.get("quantity") or 1)
             continue
         players = []
         for pl in p.findall("players/player"):
@@ -117,6 +121,7 @@ def main():
         "username": CONFIG["username"],
         "updated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "plays": plays,
+        "others": dict(sorted(OTHERS.items(), key=lambda kv: -kv[1])),
     }
     path = os.path.join(ROOT, "data", "plays.json")
     with open(path, "w", encoding="utf-8") as f:
