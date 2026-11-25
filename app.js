@@ -6,7 +6,8 @@
   const pct = (a, b) => b ? Math.round((a / b) * 100) + "%" : "—";
   const fmtDate = d => d ? new Date(d + "T00:00:00").toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" }) : "—";
   const fmtMin = m => { if (!m) return "—"; const h = Math.floor(m / 60), r = Math.round(m % 60); return h ? `${h}h ${String(r).padStart(2, "0")}m` : `${r} min`; };
-  const num = s => { const v = parseFloat(String(s).replace(",", ".")); return Number.isFinite(v) ? v : null; };
+  // solo numeri "puliti" (es. 3, 120, -5, 7.5): "46,26", "3-1", "61/59" non sono punteggi validi
+  const num = s => /^\s*-?\d+(\.\d+)?\s*$/.test(String(s ?? "")) ? parseFloat(s) : null;
   const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
   const norm = s => (s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
 
@@ -23,6 +24,7 @@
     $("#xmlInput").addEventListener("change", onXml);
     $("#pubBtn").addEventListener("click", () => { try { localStorage.removeItem(LIVE_KEY); } catch (e) {} location.reload(); });
     await loadLive();
+    prepare();
     render();
   }
 
@@ -81,6 +83,7 @@
     DATA.plays = [...byId.values()].sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
     DATA.updated = new Date().toISOString();
     ev.target.value = "";
+    prepare();
     render();
   }
 
@@ -94,7 +97,7 @@
     for (const p of list) for (const pl of p.players) {
       const s = m.get(pl.name) || { name: pl.name, games: 0, wins: 0, scores: [], last: "" };
       s.games += qty(p); if (pl.win) s.wins += qty(p);
-      const v = num(pl.score); if (v !== null) s.scores.push(v);
+      const v = pl.v; if (v !== null) s.scores.push(v);
       if (p.date > s.last) s.last = p.date;
       m.set(pl.name, s);
     }
@@ -135,10 +138,10 @@
     const w0 = split[0].some(pl => pl.win), w1 = split[1].some(pl => pl.win);
     if (w0 !== w1) winner = w0 ? 0 : 1;
     else {
-      const s0 = Math.max(...split[0].map(pl => num(pl.score) ?? -Infinity)), s1 = Math.max(...split[1].map(pl => num(pl.score) ?? -Infinity));
+      const s0 = Math.max(...split[0].map(pl => pl.v ?? -Infinity)), s1 = Math.max(...split[1].map(pl => pl.v ?? -Infinity));
       if (s0 !== s1 && Number.isFinite(Math.max(s0, s1))) winner = s0 > s1 ? 0 : 1;
     }
-    const score = t => { const v = t.map(pl => num(pl.score)).filter(x => x !== null); return v.length ? Math.max(...v) : null; };
+    const score = t => { const v = t.map(pl => pl.v).filter(x => x !== null); return v.length ? Math.max(...v) : null; };
     return { split: split.map(t => t.map(pl => pl.name).sort()), winner, scores: split.map(score) };
   }
 
@@ -230,7 +233,7 @@
     const timed = l.filter(p => p.length > 0);
     const minutes = timed.reduce((a, p) => a + p.length, 0);
     const stats = playerStats(l);
-    const allScores = l.flatMap(p => p.players.map(pl => ({ name: pl.name, v: num(pl.score), date: p.date }))).filter(x => x.v !== null);
+    const allScores = l.flatMap(p => p.players.map(pl => ({ name: pl.name, v: pl.v, date: p.date }))).filter(x => x.v !== null);
     const best = allScores.sort((a, b) => b.v - a.v)[0];
     const locs = new Map(); l.forEach(p => { const k = p.location || "(non indicato)"; locs.set(k, (locs.get(k) || 0) + qty(p)); });
     const locRows = [...locs].sort((a, b) => b[1] - a[1]).slice(0, 8);
@@ -255,11 +258,35 @@
         <div class="card"><h3>Numero di giocatori</h3><table><tbody>${[...sizes].sort((a, b) => a[0] - b[0]).map(([k, c]) => `<tr><td>${k} giocatori</td><td class="num">${fmtInt(c)}</td><td class="num muted">${pct(c, n)}</td></tr>`).join("")}</tbody></table></div>
         <div class="card"><h3>Luoghi</h3><table><tbody>${locRows.map(([k, c]) => `<tr><td>${esc(k)}</td><td class="num">${fmtInt(c)}</td></tr>`).join("")}</tbody></table></div>
       </div>
+      ${oddScoresCard(l)}
       <div class="card"><h2>Ultime partite</h2>${playsTable(l.slice(-15).reverse())}
         <p class="note">Nomi BGG inclusi: ${names.map(esc).join(", ")}</p></div>`;
     $("#goPairs")?.addEventListener("click", () => { state.tab = "pairs"; state.pairGame = key; save(); render(); });
     const m = byMonth(l); barChart($("#cm"), m.labels, m.values, css("--c1"));
     const ys = [...years].sort(); barChart($("#cy"), ys.map(y => y[0]), ys.map(y => y[1]), css("--c3"));
+  }
+
+  /** Per ogni giocatore calcola pl.v (punteggio valido o null) e pl.bad (perché non è valido). */
+  function prepare() {
+    for (const p of DATA.plays) {
+      const max = CONFIG.games.find(g => g.key === p.game)?.maxScore;
+      for (const pl of p.players) {
+        const v = num(pl.score);
+        pl.bad = pl.score === "" ? "" : v === null ? "non è un numero" : max !== undefined && v > max ? `supera il massimo (${max})` : "";
+        pl.v = pl.bad ? null : v;
+      }
+    }
+  }
+
+  /** Punteggi non validi: esclusi da medie e record, da correggere su BGG. */
+  function oddScoresCard(list) {
+    const odd = list.flatMap(p => p.players.filter(pl => pl.bad).map(pl => ({ p, pl })));
+    if (!odd.length) return "";
+    return `<div class="card"><h2>Punteggi da controllare (${odd.length})</h2>
+      <p class="note" style="margin:0 0 10px">Questi punteggi non sono usati per medie e record. Clicca la data per aprire la partita su BGG e correggerla.</p>
+      <div class="table-wrap"><table><thead><tr><th>Data</th><th>Giocatore</th><th>Punteggio scritto</th><th>Motivo</th></tr></thead><tbody>
+      ${odd.reverse().map(o => `<tr><td><a href="https://boardgamegeek.com/play/details/${o.p.id}" target="_blank" rel="noopener">${fmtDate(o.p.date)}</a></td>
+        <td>${esc(o.pl.name)}</td><td><code>${esc(o.pl.score)}</code></td><td class="muted">${o.pl.bad}</td></tr>`).join("")}</tbody></table></div></div>`;
   }
 
   function playsTable(list) {
