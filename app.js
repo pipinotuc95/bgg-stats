@@ -203,6 +203,7 @@
     $("#tabs").innerHTML = tabs.map(t => `<button class="tab${t.key === state.tab ? " active" : ""}" data-k="${t.key}" ${t.c ? `style="--c:${t.c}"` : ""}>
       <span>${t.icon}</span>${esc(t.label)}${t.n !== undefined ? `<span class="n">${t.n}</span>` : ""}</button>`).join("");
     $("#tabs").querySelectorAll(".tab").forEach(b => b.onclick = () => go(b.dataset.k));
+    const act = $("#tabs .active"); if (act) $("#tabs").scrollLeft = act.offsetLeft - 16;
 
     const v = $("#view");
     if (!DATA.plays.length) { v.innerHTML = ""; return; }

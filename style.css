@@ -52,8 +52,12 @@ a { color: var(--accent); }
 .logo { font-size: 1.6rem; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px;
   background: linear-gradient(135deg, var(--g1), var(--g7)); flex: none; }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-.tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 10px; }
-.tabs::-webkit-scrollbar { display: none; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 10px; }
+@media (max-width: 760px) {
+  /* sul telefono una riga sola che scorre di lato, con barra visibile */
+  .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+  .top { position: static; }
+}
 .tab { border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: .88rem; font-weight: 600;
   padding: 6px 12px; border-radius: 999px; cursor: pointer; white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; }
 .tab:hover { background: var(--surface-2); }
