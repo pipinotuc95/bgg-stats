@@ -16,10 +16,13 @@
       <h1>Statistiche partite</h1>
       <p class="sub">Utente BGG <strong id="user">THE_B</strong> · <span id="updated">—</span></p>
     </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+    <button class="btn" id="pubBtn" hidden title="Torna ai dati pubblicati su GitHub">Dati pubblicati</button>
     <label class="btn ghost" title="Carica uno o più file XML della BGG XML API2 (plays)">
       Importa XML
       <input type="file" id="xmlInput" accept=".xml,text/xml" multiple hidden>
     </label>
+    </div>
   </div>
   <nav class="wrap tabs" id="tabs"></nav>
 </header>

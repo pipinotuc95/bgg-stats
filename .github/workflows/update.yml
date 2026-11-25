@@ -2,7 +2,7 @@ name: Aggiorna statistiche BGG e pubblica
 
 on:
   schedule:
-    - cron: "17 4 * * *"   # ogni giorno alle 04:17 UTC
+    - cron: "*/30 * * * *"   # ogni 30 minuti (GitHub a volte ritarda qualche minuto)
   workflow_dispatch:
   push:
     branches: [main]
@@ -19,6 +19,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.save.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -29,17 +31,20 @@ jobs:
           BGG_TOKEN: ${{ secrets.BGG_TOKEN }}
         run: python3 scripts/fetch_plays.py
       - name: Salva i dati nel repository
+        id: save
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@users.noreply.github.com"
           git add data/plays.json
-          git diff --cached --quiet || (git commit -m "Aggiorna partite BGG" && git push)
+          if git diff --cached --quiet -I '"updated"'; then echo "changed=false" >> "$GITHUB_OUTPUT"; git reset -q
+          else git commit -m "Aggiorna partite BGG" && git push && echo "changed=true" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .
   deploy:
     needs: build
+    if: github.event_name != 'schedule' || needs.build.outputs.changed == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

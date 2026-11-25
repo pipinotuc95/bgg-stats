@@ -27,3 +27,9 @@ Finché BGG non approva l'applicazione si può usare il bookmarklet in `tools/sc
 (da cliccare su boardgamegeek.com da loggati): scarica `bgg-plays.xml`.
 Caricalo nella cartella `data/` del repository (Add file → Upload files): la GitHub Action
 lo converte e pubblica il sito. Con `BGG_TOKEN` impostato il file non serve più.
+
+## Statistiche live
+Il bookmarklet `tools/statistiche-live.js`, cliccato su boardgamegeek.com da loggati, scarica
+tutte le partite e apre il sito con i dati di quel momento. I dati passano nel link, solo nel
+browser, e restano salvati in quel browser (pulsante "Dati pubblicati" per tornare a quelli su GitHub).
+Con `BGG_TOKEN` impostato, la GitHub Action aggiorna il sito pubblico ogni 30 minuti.

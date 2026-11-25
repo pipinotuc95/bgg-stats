@@ -21,7 +21,32 @@
     try { DATA = await (await fetch("data/plays.json", { cache: "no-store" })).json(); }
     catch (e) { DATA = { username: CONFIG.username, updated: null, plays: [] }; }
     $("#xmlInput").addEventListener("change", onXml);
+    $("#pubBtn").addEventListener("click", () => { try { localStorage.removeItem(LIVE_KEY); } catch (e) {} location.reload(); });
+    await loadLive();
     render();
+  }
+
+  /* ---------- dati live dal pulsante nei preferiti (passati nel link, mai a un server) ---------- */
+  const LIVE_KEY = "bggstats-live";
+  async function loadLive() {
+    let live = null;
+    if (location.hash.startsWith("#live=")) {
+      try {
+        const b64 = location.hash.slice(6).replace(/-/g, "+").replace(/_/g, "/");
+        const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+        const raw = JSON.parse(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).text());
+        const plays = raw.p.map(([id, date, quantity, length, inc, location, bggName, bggId, pls]) => ({
+          id, date, quantity, length, incomplete: !!inc, location, bggName, bggId, comments: "", game: gameKey(bggName),
+          players: pls.map(([name, score, win, color, start]) => ({ name: (name || "?").trim(), username: "", score, win: !!win, color, start })),
+        })).filter(p => p.game).sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
+        live = { username: raw.u, updated: raw.t, plays, live: true };
+        try { localStorage.setItem(LIVE_KEY, JSON.stringify(live)); } catch (e) {}
+      } catch (e) { alert("Non riesco a leggere i dati live: " + e.message); }
+      history.replaceState(null, "", location.pathname + location.search);
+    } else {
+      try { live = JSON.parse(localStorage.getItem(LIVE_KEY) || "null"); } catch (e) {}
+    }
+    if (live && (!DATA.updated || live.updated > DATA.updated)) DATA = live;
   }
 
   function gameKey(name) {
@@ -123,7 +148,8 @@
   function render() {
     charts.forEach(c => c.destroy()); charts = [];
     $("#user").textContent = DATA.username || CONFIG.username;
-    $("#updated").textContent = DATA.updated ? "aggiornato il " + new Date(DATA.updated).toLocaleString("it-IT", { dateStyle: "medium", timeStyle: "short" }) : "dati non ancora scaricati";
+    $("#pubBtn").hidden = !DATA.live;
+    $("#updated").textContent = DATA.updated ? (DATA.live ? "dati live del " : "aggiornato il ") + new Date(DATA.updated).toLocaleString("it-IT", { dateStyle: "medium", timeStyle: "short" }) : "dati non ancora scaricati";
     $("#empty").hidden = DATA.plays.length > 0;
 
     const tabs = [{ key: "overview", label: "Panoramica" }, ...CONFIG.games.map(g => ({ key: g.key, label: g.label, n: plays(g.key).reduce((a, p) => a + qty(p), 0) })), { key: "pairs", label: "Coppie" }];
